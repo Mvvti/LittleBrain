@@ -1,31 +1,31 @@
 # 🧠 LittleBrain
 
-Lekka aplikacja desktopowa na Windows do błyskawicznego zapisywania notatek.
+Lightweight desktop app for Windows to capture notes in 2 seconds.
 
-**myśl → skrót → wpis → Enter → zapis (2 sekundy)**
-
----
-
-## Funkcje
-
-- **Quick Capture** — skrót `Ctrl+Shift+Space` przywołuje okno z dowolnego miejsca
-- **Siatka notatek** — przejrzysty widok kart z kolorami wg statusu
-- **Statusy** — `active` (żółty), `done` (zielony), `archived` (szary)
-- **Wyszukiwarka i filtry** — szybkie znajdowanie notatek
-- **Przypomnienia** — ustaw datę i godzinę, aplikacja przypomni w odpowiednim czasie
-- **Tray icon** — działa w tle, chowa się do zasobnika zamiast zamykać
-- **Lokalnie i offline** — żadnych kont, żadnej chmury, dane tylko na Twoim komputerze
+**thought → shortcut → type → Enter → saved**
 
 ---
 
-## Wymagania
+## Features
+
+- **Quick Capture** — `Ctrl+Shift+Space` brings up the window from anywhere
+- **Note cards grid** — clean card view with color-coded statuses
+- **Statuses** — `active` (yellow), `done` (green), `archived` (grey)
+- **Search & filters** — find notes instantly
+- **Reminders** — set a date and time, the app will notify you
+- **System tray** — runs in the background, hides to tray instead of closing
+- **Local & offline** — no accounts, no cloud, your data stays on your machine
+
+---
+
+## Requirements
 
 - Windows 10 / 11
 - Python 3.12+
 
 ---
 
-## Instalacja (tryb developerski)
+## Installation (dev mode)
 
 ```bash
 git clone https://github.com/TWOJA_NAZWA/LittleBrain.git
@@ -47,49 +47,49 @@ pip install pyinstaller
 python -m PyInstaller LittleBrain.spec
 ```
 
-Plik wykonywalny pojawi się w `dist/LittleBrain/LittleBrain.exe`.
+The executable will be available at `dist/LittleBrain/LittleBrain.exe`.
 
 ---
 
-## Struktura projektu
+## Project structure
 
 ```
 LittleBrain/
 ├── app.py                  # Entry point
 ├── requirements.txt
-├── LittleBrain.spec        # Konfiguracja PyInstaller
+├── LittleBrain.spec        # PyInstaller config
 ├── assets/
 │   └── icon.ico
 ├── core/
-│   ├── db.py               # SQLite — operacje na bazie
+│   ├── db.py               # SQLite operations
 │   ├── models.py
 │   ├── notes_service.py
 │   ├── hotkeys.py
 │   └── reminders.py
 ├── ui/
-│   ├── webview_app.py      # Backend API + tray + hotkey
+│   ├── webview_app.py      # API backend + tray + hotkey
 │   └── web/
 │       ├── index.html
 │       ├── style.css
 │       └── app.js
-└── workflow/               # Dokumentacja projektu
+└── workflow/               # Project documentation
 ```
 
 ---
 
 ## Stack
 
-| Warstwa | Technologia |
+| Layer | Technology |
 |---|---|
 | GUI | pywebview (HTML/CSS/JS) |
 | Backend | Python 3.12 |
-| Baza danych | SQLite (lokalna) |
+| Database | SQLite (local) |
 | Tray icon | pystray |
-| Skróty klawiszowe | keyboard |
+| Global hotkey | keyboard |
 | Build | PyInstaller |
 
 ---
 
-## Licencja
+## License
 
 MIT
