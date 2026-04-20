@@ -1,0 +1,24 @@
+# Środowisko wirtualne
+.venv/
+
+# PyInstaller
+dist/
+build/
+*.spec.bak
+
+# Baza danych (dane użytkownika)
+notes.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE
+.idea/
+.vscode/
+
+# System
+Thumbs.db
+desktop.ini
