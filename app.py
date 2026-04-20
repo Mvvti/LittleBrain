@@ -1,9 +1,25 @@
-﻿import ctypes
+import ctypes
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("LittleBrain")
 
 import os
 import sys
 from pathlib import Path
+
+_mutex_handle = None
+
+
+def _ensure_single_instance() -> None:
+    global _mutex_handle
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateMutexW.restype = ctypes.c_void_p
+    kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, ctypes.c_bool, ctypes.c_wchar_p]
+    _mutex_handle = kernel32.CreateMutexW(None, False, "LittleBrainSingleInstance")
+    if ctypes.get_last_error() == 183:  # ERROR_ALREADY_EXISTS
+        hwnd = ctypes.windll.user32.FindWindowW(None, "LittleBrain")
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 9)
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+        sys.exit(0)
 
 
 def _runtime_paths() -> tuple[Path, Path]:
@@ -17,6 +33,7 @@ def _runtime_paths() -> tuple[Path, Path]:
 
 
 def main() -> None:
+    _ensure_single_instance()
     app_dir, resource_dir = _runtime_paths()
     db_path = app_dir / "notes.db"
 
