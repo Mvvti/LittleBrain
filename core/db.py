@@ -7,11 +7,13 @@ from typing import Optional
 DB_PATH = Path(__file__).resolve().parent.parent / "notes.db"
 
 
+# --- CONNECTION ---
 def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
     target_path = db_path or DB_PATH
     return sqlite3.connect(target_path)
 
 
+# --- SCHEMA ---
 def init_db(db_path: Optional[Path] = None) -> None:
     with get_connection(db_path) as conn:
         conn.execute(
@@ -29,6 +31,7 @@ def init_db(db_path: Optional[Path] = None) -> None:
         )
 
 
+# --- CREATE ---
 def insert_note(
     content: str,
     remind_at: str | None = None,
@@ -38,17 +41,19 @@ def insert_note(
         conn.execute(
             """
             INSERT INTO notes (content, created_at, updated_at, status, remind_at, reminder_shown)
-            VALUES (?, datetime('now'), datetime('now'), 'active', ?, 0)
+            VALUES (?, datetime('now', 'localtime'), datetime('now', 'localtime'), 'active', ?, 0)
             """,
             (content, remind_at),
         )
 
 
+# --- READ ---
 def fetch_notes(
     search_text: str = "",
     filter_name: str = "all",
+    sort_by: str = "newest",
     db_path: Optional[Path] = None,
-) -> list[tuple[int, str, str, str]]:
+) -> list[tuple[int, str, str, str, str | None, int]]:
     conditions: list[str] = []
     params: list[str] = []
 
@@ -60,31 +65,74 @@ def fetch_notes(
         conditions.append("status = ?")
         params.append(filter_name)
     elif filter_name == "with_reminder":
-        conditions.append("remind_at IS NOT NULL")
+        conditions.append("remind_at IS NOT NULL AND reminder_shown = 0")
 
     where_clause = ""
     if conditions:
         where_clause = "WHERE " + " AND ".join(conditions)
 
+    if sort_by == "oldest":
+        order_by = "ORDER BY created_at ASC, id ASC"
+    elif sort_by == "status":
+        order_by = (
+            "ORDER BY CASE status "
+            "WHEN 'active' THEN 1 "
+            "WHEN 'done' THEN 2 "
+            "WHEN 'archived' THEN 3 "
+            "END ASC, created_at DESC, id DESC"
+        )
+    else:
+        order_by = "ORDER BY created_at DESC, id DESC"
+
     with get_connection(db_path) as conn:
         rows = conn.execute(
             f"""
-            SELECT id, content, status, created_at
+            SELECT id, content, status, created_at, remind_at, reminder_shown
             FROM notes
             {where_clause}
-            ORDER BY created_at DESC, id DESC
+            {order_by}
             """,
             params,
         ).fetchall()
     return rows
 
 
+def get_notes_counts(db_path: Optional[Path] = None) -> dict[str, int]:
+    with get_connection(db_path) as conn:
+        all_count = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+        active_count = conn.execute(
+            "SELECT COUNT(*) FROM notes WHERE status = 'active'"
+        ).fetchone()[0]
+        done_count = conn.execute(
+            "SELECT COUNT(*) FROM notes WHERE status = 'done'"
+        ).fetchone()[0]
+        archived_count = conn.execute(
+            "SELECT COUNT(*) FROM notes WHERE status = 'archived'"
+        ).fetchone()[0]
+        with_reminder_count = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM notes
+            WHERE remind_at IS NOT NULL AND reminder_shown = 0
+            """
+        ).fetchone()[0]
+
+    return {
+        "all": all_count,
+        "active": active_count,
+        "done": done_count,
+        "archived": archived_count,
+        "with_reminder": with_reminder_count,
+    }
+
+
+# --- UPDATE ---
 def update_note_status(note_id: int, new_status: str, db_path: Optional[Path] = None) -> None:
     with get_connection(db_path) as conn:
         conn.execute(
             """
             UPDATE notes
-            SET status = ?, updated_at = datetime('now')
+            SET status = ?, updated_at = datetime('now', 'localtime')
             WHERE id = ?
             """,
             (new_status, note_id),
@@ -96,19 +144,18 @@ def update_note_content(
     content: str,
     db_path: Optional[Path] = None,
 ) -> None:
-    path = db_path or DB_PATH
-    with sqlite3.connect(path) as conn:
+    with get_connection(db_path) as conn:
         conn.execute(
             """
             UPDATE notes
-            SET content = ?, updated_at = datetime('now')
+            SET content = ?, updated_at = datetime('now', 'localtime')
             WHERE id = ?
             """,
             (content, note_id),
         )
 
 
+# --- DELETE ---
 def delete_note(note_id: int, db_path: Optional[Path] = None) -> None:
-    path = db_path or DB_PATH
-    with sqlite3.connect(path) as conn:
+    with get_connection(db_path) as conn:
         conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
