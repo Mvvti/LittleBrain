@@ -1,5 +1,6 @@
-﻿import sys
+import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import ctypes
@@ -15,7 +16,7 @@ import pystray
 from core.db import fetch_notes, insert_note
 import webview
 
-APP_TITLE = "LittleBrain"
+APP_TITLE = os.environ.get("LITTLEBRAIN_APP_TITLE", "LittleBrain")
 RESOURCE_DIR = Path(os.environ.get("LITTLEBRAIN_RESOURCE_DIR", str(Path(__file__).resolve().parent.parent)))
 DB_PATH = Path(os.environ.get("LITTLEBRAIN_DB_PATH", str(Path(__file__).resolve().parent.parent / "notes.db")))
 ICON_PATH = RESOURCE_DIR / "assets" / "icon.ico"
@@ -24,12 +25,28 @@ _tray_icon: pystray.Icon | None = None
 
 
 class Api:
-    def get_notes(self, search="", filter_name="all"):
-        notes = fetch_notes(search_text=search, filter_name=filter_name, db_path=DB_PATH)
+    def get_notes(self, search="", filter_name="all", sort_by=""):
+        notes = fetch_notes(
+            search_text=search,
+            filter_name=filter_name,
+            sort_by=sort_by or "newest",
+            db_path=DB_PATH,
+        )
         return [
-            {"id": n[0], "content": n[1], "status": n[2], "created_at": n[3]}
+            {
+                "id": n[0],
+                "content": n[1],
+                "status": n[2],
+                "created_at": n[3],
+                "has_reminder": n[4] is not None and n[5] == 0,
+            }
             for n in notes
         ]
+
+    def get_counts(self):
+        from core.db import get_notes_counts
+
+        return get_notes_counts(db_path=DB_PATH)
 
     def save_note(self, content, remind_at=None):
         insert_note(content=content, remind_at=remind_at, db_path=DB_PATH)
@@ -37,50 +54,24 @@ class Api:
 
     def delete_note(self, note_id: int):
         from core.db import delete_note
+
         delete_note(note_id=note_id, db_path=DB_PATH)
         return {"ok": True}
 
     def update_note(self, note_id: int, content: str):
         from core.db import update_note_content
+
         update_note_content(note_id=note_id, content=content, db_path=DB_PATH)
         return {"ok": True}
 
     def update_status(self, note_id: int, status: str):
         from core.db import update_note_status
+
         update_note_status(note_id=note_id, new_status=status, db_path=DB_PATH)
         return {"ok": True}
 
 
-def _set_window_icon() -> None:
-    try:
-        time.sleep(0.5)
-        WM_SETICON = 0x0080
-        hwnd = ctypes.windll.user32.FindWindowW(None, APP_TITLE)
-        if hwnd and ICON_PATH.exists():
-            hicon_small = ctypes.windll.user32.LoadImageW(
-                None, str(ICON_PATH), 1, 16, 16, 0x10
-            )
-            hicon_large = ctypes.windll.user32.LoadImageW(
-                None, str(ICON_PATH), 1, 32, 32, 0x10
-            )
-            if hicon_small:
-                ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 0, hicon_small)
-            if hicon_large:
-                ctypes.windll.user32.SendMessageW(hwnd, WM_SETICON, 1, hicon_large)
-    except Exception:
-        pass
-
-
-def _restore_window() -> None:
-    try:
-        hwnd = ctypes.windll.user32.FindWindowW(None, APP_TITLE)
-        if hwnd:
-            ctypes.windll.user32.ShowWindow(hwnd, 9)
-            ctypes.windll.user32.SetForegroundWindow(hwnd)
-    except Exception:
-        pass
-
-
+# --- ICON ---
 def _ensure_icon_file() -> None:
     ICON_PATH.parent.mkdir(parents=True, exist_ok=True)
     if ICON_PATH.exists():
@@ -100,6 +91,62 @@ def _load_tray_image() -> Image.Image:
         return Image.new("RGBA", (32, 32), "#F4D03F")
 
 
+def _set_window_icon() -> None:
+    try:
+        time.sleep(0.5)
+        wm_seticon = 0x0080
+        hwnd = ctypes.windll.user32.FindWindowW(None, APP_TITLE)
+        if hwnd and ICON_PATH.exists():
+            hicon_small = ctypes.windll.user32.LoadImageW(
+                None, str(ICON_PATH), 1, 16, 16, 0x10
+            )
+            hicon_large = ctypes.windll.user32.LoadImageW(
+                None, str(ICON_PATH), 1, 32, 32, 0x10
+            )
+            if hicon_small:
+                ctypes.windll.user32.SendMessageW(hwnd, wm_seticon, 0, hicon_small)
+            if hicon_large:
+                ctypes.windll.user32.SendMessageW(hwnd, wm_seticon, 1, hicon_large)
+    except Exception:
+        pass
+
+
+# --- WINDOW ---
+def _restore_window() -> None:
+    try:
+        hwnd = ctypes.windll.user32.FindWindowW(None, APP_TITLE)
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 9)
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+    except Exception:
+        pass
+
+
+# --- TRAY ---
+def start_tray_icon(window: webview.Window) -> None:
+    def _on_show(icon, _item) -> None:
+        _restore_window()
+
+    def _on_quit(icon, _item) -> None:
+        try:
+            icon.stop()
+            window.destroy()
+        except Exception:
+            os._exit(0)
+
+    def _run() -> None:
+        global _tray_icon
+        menu = pystray.Menu(
+            pystray.MenuItem("Pokaż", _on_show, default=True),
+            pystray.MenuItem("Zakończ", _on_quit),
+        )
+        _tray_icon = pystray.Icon("littlebrain", _load_tray_image(), APP_TITLE, menu)
+        _tray_icon.run()
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+# --- HOTKEY ---
 def start_hotkey(window: webview.Window) -> None:
     def _on_hotkey() -> None:
         try:
@@ -110,28 +157,7 @@ def start_hotkey(window: webview.Window) -> None:
     keyboard.add_hotkey("ctrl+shift+space", _on_hotkey)
 
 
-def start_tray_icon(window: webview.Window) -> None:
-    def _on_show(icon, _item) -> None:
-        _restore_window()
-
-    def _on_quit(icon, _item) -> None:
-        try:
-            icon.stop()
-        finally:
-            os._exit(0)
-
-    def _run() -> None:
-        global _tray_icon
-        menu = pystray.Menu(
-            pystray.MenuItem("Pokaż", _on_show),
-            pystray.MenuItem("Zakończ", _on_quit),
-        )
-        _tray_icon = pystray.Icon("littlebrain", _load_tray_image(), APP_TITLE, menu)
-        _tray_icon.run()
-
-    threading.Thread(target=_run, daemon=True).start()
-
-
+# --- REMINDERS ---
 def start_reminder_scheduler(window: webview.Window) -> None:
     def _reminder_loop() -> None:
         while True:
@@ -148,15 +174,18 @@ def start_reminder_scheduler(window: webview.Window) -> None:
                     ).fetchall()
 
                     for note_id, content in rows:
-                        window.evaluate_js(f"showReminder({json.dumps(content)})")
-                        conn.execute(
-                            """
-                            UPDATE notes
-                            SET reminder_shown = 1
-                            WHERE id = ?
-                            """,
-                            (note_id,),
+                        shown = window.evaluate_js(
+                            f"(function(){{ return showReminder({json.dumps(content)}); }})()"
                         )
+                        if shown is True:
+                            conn.execute(
+                                """
+                                UPDATE notes
+                                SET reminder_shown = 1
+                                WHERE id = ?
+                                """,
+                                (note_id,),
+                            )
             except Exception:
                 pass
 
@@ -165,11 +194,12 @@ def start_reminder_scheduler(window: webview.Window) -> None:
     threading.Thread(target=_reminder_loop, daemon=True).start()
 
 
+# --- APP ---
 def on_start(window: webview.Window) -> None:
     start_hotkey(window)
     start_reminder_scheduler(window)
     start_tray_icon(window)
-    _set_window_icon()
+    threading.Thread(target=_set_window_icon, daemon=True).start()
 
     def _on_closing() -> bool:
         try:
