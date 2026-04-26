@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>LittleBrain</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="splash">
+        <div class="splash-content">
+            <div class="splash-icon">🧠</div>
+            <div class="splash-title">LittleBrain</div>
+            <div class="splash-loader"></div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button class="btn-primary" id="btn-new">+ Nowa notatka</button>
+        <input type="text" id="search" placeholder="Szukaj notatek...">
+        <select id="filter">
+            <option value="all">all</option>
+            <option value="active">active</option>
+            <option value="done">done</option>
+            <option value="archived">archived</option>
+            <option value="with_reminder">with_reminder</option>
+        </select>
+        <select id="sort">
+            <option value="newest">Najnowsze</option>
+            <option value="oldest">Najstarsze</option>
+            <option value="status">Wg statusu</option>
+        </select>
+        <button id="theme-toggle" class="btn-primary" type="button">🌙</button>
+    </div>
+
+    <div id="capture-modal" class="modal-overlay">
+        <div class="capture-card">
+            <div class="capture-header">
+                <h2>Nowa notatka</h2>
+                <button id="capture-close" class="capture-close">×</button>
+            </div>
+            <input id="capture-content" type="text" placeholder="Wpisz co masz na głowie...">
+            <div class="capture-row">
+                <select id="capture-day">
+                    <option value="—">—</option>
+                    <option value="dziś">dziś</option>
+                    <option value="jutro">jutro</option>
+                    <option value="pojutrze">pojutrze</option>
+                    <option value="za tydzień">za tydzień</option>
+                    <option value="za 2 tygodnie">za 2 tygodnie</option>
+                    <option value="za miesiąc">za miesiąc</option>
+                </select>
+                <select id="capture-hour">
+                    <option value="—">—</option>
+                    <option value="06:00">06:00</option>
+                    <option value="07:00">07:00</option>
+                    <option value="08:00">08:00</option>
+                    <option value="09:00">09:00</option>
+                    <option value="10:00">10:00</option>
+                    <option value="11:00">11:00</option>
+                    <option value="12:00">12:00</option>
+                    <option value="13:00">13:00</option>
+                    <option value="14:00">14:00</option>
+                    <option value="15:00">15:00</option>
+                    <option value="16:00">16:00</option>
+                    <option value="17:00">17:00</option>
+                    <option value="18:00">18:00</option>
+                    <option value="19:00">19:00</option>
+                    <option value="20:00">20:00</option>
+                    <option value="21:00">21:00</option>
+                    <option value="22:00">22:00</option>
+                    <option value="23:00">23:00</option>
+                </select>
+            </div>
+            <button id="capture-save" class="btn-primary capture-save">Zapisz</button>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal-overlay">
+        <div class="edit-card">
+            <div class="edit-header">
+                <h2>Edytuj notatkę</h2>
+                <button id="edit-close" class="capture-close">×</button>
+            </div>
+            <textarea id="edit-content"></textarea>
+            <label for="edit-remind-day">Przypomnienie:</label>
+            <div class="edit-reminder-row">
+                <select id="edit-remind-day">
+                    <option value="—">—</option>
+                    <option value="dziś">dziś</option>
+                    <option value="jutro">jutro</option>
+                    <option value="pojutrze">pojutrze</option>
+                    <option value="za tydzień">za tydzień</option>
+                    <option value="za 2 tygodnie">za 2 tygodnie</option>
+                    <option value="za miesiąc">za miesiąc</option>
+                </select>
+                <select id="edit-remind-hour">
+                    <option value="—">—</option>
+                    <option value="06:00">06:00</option>
+                    <option value="07:00">07:00</option>
+                    <option value="08:00">08:00</option>
+                    <option value="09:00">09:00</option>
+                    <option value="10:00">10:00</option>
+                    <option value="11:00">11:00</option>
+                    <option value="12:00">12:00</option>
+                    <option value="13:00">13:00</option>
+                    <option value="14:00">14:00</option>
+                    <option value="15:00">15:00</option>
+                    <option value="16:00">16:00</option>
+                    <option value="17:00">17:00</option>
+                    <option value="18:00">18:00</option>
+                    <option value="19:00">19:00</option>
+                    <option value="20:00">20:00</option>
+                    <option value="21:00">21:00</option>
+                    <option value="22:00">22:00</option>
+                    <option value="23:00">23:00</option>
+                </select>
+            </div>
+            <button id="edit-clear-reminder" class="edit-clear-reminder" type="button">Usuń przypomnienie</button>
+            <div id="edit-char-count">0 znaków</div>
+            <button id="edit-save" class="btn-primary capture-save">Zapisz</button>
+        </div>
+    </div>
+
+    <div class="cards-grid" id="cards-grid"></div>
+    <script src="app.js"></script>
+</body>
+</html>
